@@ -23,21 +23,21 @@ const Blurg = ({ children, onBlur }: BlurgProps) => {
 
   const attr = {} as any;
 
-  if (IOS) {
-    attr.onMouseOut = (e: React.FocusEvent) => {
-      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-        console.log("not related!", e.relatedTarget);
-        onBlur(e);
-      }
-    };
-  } else {
-    attr.onBlur = (e: React.FocusEvent) => {
-      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-        console.log("not related!", e.relatedTarget);
-        onBlur(e);
-      }
-    };
-  }
+  // if (IOS) {
+  attr.onMouseOut = (e: React.FocusEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      console.log("not related!", e.relatedTarget);
+      onBlur(e);
+    }
+  };
+  // } else {
+  //   attr.onBlur = (e: React.FocusEvent) => {
+  //     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+  //       console.log("not related!", e.relatedTarget);
+  //       onBlur(e);
+  //     }
+  //   };
+  // }
 
   return (
     <div tabIndex={0} {...attr}>
