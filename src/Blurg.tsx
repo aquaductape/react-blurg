@@ -1,11 +1,11 @@
 import React, { ReactChild, ReactChildren, useEffect, useRef } from "react";
+import { IOS } from "./browserInfo";
 
 type BlurgProps = {
   children: ReactChild | ReactChildren | boolean | null;
   onBlur: (e: React.FocusEvent) => void;
 };
 const Blurg = ({ children, onBlur }: BlurgProps) => {
-  const mainRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     // mainRef.current?.focus();
     const onKeyDown = (e: KeyboardEvent) => {
@@ -20,17 +20,27 @@ const Blurg = ({ children, onBlur }: BlurgProps) => {
       document.removeEventListener("keydown", onKeyDown);
     };
   }, []);
+
+  const attr = {} as any;
+
+  if (IOS) {
+    attr.onMouseOut = (e: React.FocusEvent) => {
+      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+        console.log("not related!", e.relatedTarget);
+        onBlur(e);
+      }
+    };
+  } else {
+    attr.onBlur = (e: React.FocusEvent) => {
+      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+        console.log("not related!", e.relatedTarget);
+        onBlur(e);
+      }
+    };
+  }
+
   return (
-    <div
-      ref={mainRef}
-      tabIndex={0}
-      onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-          console.log("not related!", e.relatedTarget);
-          onBlur(e);
-        }
-      }}
-    >
+    <div tabIndex={0} {...attr}>
       {children}
     </div>
   );
