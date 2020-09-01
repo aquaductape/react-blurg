@@ -1,21 +1,3 @@
-function IOSVersion(majorVersion: number) {
-  if (typeof window === "undefined") return false;
-  if (/iP(hone|od|ad)/.test(navigator.platform)) {
-    const v = navigator.appVersion.match(/OS (\d+)_(\d+)_?(\d+)?/);
-
-    if (!v) return false;
-
-    const version = [
-      parseInt(v[1], 10),
-      parseInt(v[2], 10),
-      parseInt(v[3] || "0", 10),
-    ];
-
-    return version[0] >= majorVersion;
-  }
-  return false;
-}
-
 function userAgent(pattern: RegExp) {
   // @ts-ignore
   if (typeof window !== "undefined" && window.navigator) {
@@ -31,5 +13,8 @@ export const FireFox = userAgent(/firefox/i);
 export const Safari =
   userAgent(/safari/i) && !userAgent(/chrome/i) && !userAgent(/android/i);
 export const ChromeForAndroid = userAgent(/chrome/i) && userAgent(/android/i);
-export const IOS13 = IOSVersion(13);
 export const IOS = userAgent(/iP(ad|od|hone)/i);
+export const IOS13 =
+  typeof window !== "undefined"
+    ? IOS && "download" in document.createElement("a")
+    : undefined;

@@ -5,6 +5,7 @@ import Blurg from "./Blurg";
 
 const Card = () => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [toggle, setToggle] = useState(false);
 
   useEffect(() => {
     inputRef.current!.focus();
@@ -18,8 +19,20 @@ const Card = () => {
         rerum?
       </div>
       <div className="form">
-        <input type="text" placeholder="wuf" ref={inputRef} />
-        <button>Click me</button>
+        <input type="text" placeholder="Dummy Input" ref={inputRef} />
+        <button onClick={() => setToggle(true)}>Open another modal</button>
+        {toggle && (
+          <Blurg
+            onBlur={(e: React.FocusEvent) => {
+              setToggle(false);
+            }}
+          >
+            <Card></Card>
+          </Blurg>
+        )}
+        <div>
+          <button>Dummy Button</button>
+        </div>
       </div>
     </div>
   );
@@ -34,18 +47,7 @@ function App() {
         <p>
           Edit <code>src/App.tsx</code> and save to reload.
         </p>
-        <button onClick={() => setToggle(true)}>Open Card</button>
-        <div style={{ height: "227px" }}>
-          {toggle && (
-            <Blurg
-              onBlur={(e: React.FocusEvent) => {
-                setToggle(false);
-              }}
-            >
-              <Card></Card>
-            </Blurg>
-          )}
-        </div>
+        <Card></Card>
         <a
           className="App-link"
           href="https://reactjs.org"
