@@ -19,7 +19,7 @@ type BlurgProps = {
   /**
    * When true, closes all containers when pressing Escape
    *
-   * Default, closes current focused container when pressing Escape
+   * Default: Closes current focused container when pressing Escape
    */
   closeAllOnEscape?: boolean;
   /**
@@ -29,14 +29,20 @@ type BlurgProps = {
   /**
    * When false, upon initialize, container will not be focused to prevent overriding focus on component children. If there's no focusable children, the blur functionality will break.
    *
-   * Default, container focused upon initialize
+   * Default: Container focused upon initialize
    */
   focusOnContainer?: boolean;
   /**
-   * Default -1.
+   * Default: -1.
    * The tabIndex global attribute indicates that its element can be focused, and where it participates in sequential keyboard navigation
    */
   tabIndex?: number;
+  /**
+   * When false will inherit CSS focus outline
+   *
+   * Default: removes focus outline on container
+   */
+  removeFocusRing?: boolean;
 };
 
 type TCallbackStack = {
@@ -105,6 +111,7 @@ const Blurg = ({
   closeOutsidePage = false,
   focusOnContainer = true,
   tabIndex = -1,
+  removeFocusRing = true,
 }: BlurgProps) => {
   const mainRef = useRef<HTMLDivElement>(null);
 
@@ -184,6 +191,7 @@ const Blurg = ({
   return (
     <div
       tabIndex={tabIndex}
+      style={removeFocusRing ? { outline: "none" } : {}}
       ref={mainRef}
       onBlur={(e: React.FocusEvent) => {
         const targetOutsidePage =
