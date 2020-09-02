@@ -12,20 +12,52 @@ if (IOS && !IOS13) {
 
 type BlurgProps = {
   children: ReactChild | ReactChildren | boolean | null;
-  onBlur: (e: React.FocusEvent) => void;
+  /**
+   * callback for on blur event
+   */
+  onBlur: (e: React.FocusEvent | KeyboardEvent) => void;
+  /**
+   * When true, closes all containers when pressing Escape
+   *
+   * Default, closes current focused container when pressing Escape
+   */
   closeAllOnEscape?: boolean;
+  /**
+   * When true, interacting outside the page such as URL bar, Developer Tools, switching applications (Alt Tab) ect will close all containers
+   */
+  closeOutsidePage?: boolean;
+  /**
+   * When false, upon initialize, container will not be focused to prevent overriding focus on component children. If there's no focusable children, the blur functionality will break.
+   *
+   * Default, container focused upon initialize
+   */
+  focusOnContainer?: boolean;
+  /**
+   * Default -1.
+   * The tabIndex global attribute indicates that its element can be focused, and where it participates in sequential keyboard navigation
+   */
+  tabIndex?: number;
 };
 
-let callbackStack: {
+type TCallbackStack = {
   id: number;
   node: HTMLDivElement | null;
   callback: (e: any) => void;
-}[] = [];
+}[];
+
+let callbackStack: TCallbackStack = [];
 
 let counter = {
   counter: 0,
   get() {
     return this.counter;
+  },
+  set(num: number) {
+    if (num < 0) {
+      num = 0;
+    }
+
+    this.counter = num;
   },
   increase() {
     this.counter++;
@@ -43,26 +75,56 @@ let counter = {
   },
 };
 
-const Blurg = ({ children, onBlur, closeAllOnEscape = false }: BlurgProps) => {
+let alreadyRemoved = false;
+
+const addMouseDown = () => {
+  const onMouseDown = (e: MouseEvent) => {
+    console.log("mousedown");
+    alreadyRemoved = true;
+    // const { activeElement, node } = lastFocused;
+    callbackStack.some(({ node, callback }, idx) => {
+      if (!node?.contains(e.target as Node)) {
+        callback(e);
+        callbackStack = callbackStack.slice(0, idx);
+        counter.set(idx - 1);
+
+        return true;
+      }
+    });
+
+    document.removeEventListener("mousedown", onMouseDown);
+  };
+
+  document.addEventListener("mousedown", onMouseDown);
+};
+
+const Blurg = ({
+  children,
+  onBlur,
+  closeAllOnEscape = false,
+  closeOutsidePage = false,
+  focusOnContainer = true,
+  tabIndex = -1,
+}: BlurgProps) => {
   const mainRef = useRef<HTMLDivElement>(null);
-  const removedByCallBackRef = useRef(false);
 
   useEffect(() => {
     const main = mainRef.current!;
-    const removedByCallBack = removedByCallBackRef.current;
     const id = counter.get();
 
     counter.increase();
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key.match(/escape/i)) {
+        alreadyRemoved = true;
+
         if (closeAllOnEscape) {
           callbackStack[0].callback(e);
           callbackStack = [];
 
           counter.reset();
 
-          removedByCallBackRef.current = true;
+          document.removeEventListener("keydown", onKeyDown, true);
           return;
         }
 
@@ -70,18 +132,23 @@ const Blurg = ({ children, onBlur, closeAllOnEscape = false }: BlurgProps) => {
 
         if (event) {
           event.callback(e);
-          removedByCallBackRef.current = true;
           counter.decrease();
 
           if (callbackStack.length) {
-            callbackStack[counter.get() - 1].node?.focus();
+            console.log("event", callbackStack, counter.get() - 1);
+            const idx = counter.get() ? counter.get() - 1 : 0;
+            callbackStack[idx].node?.focus();
           }
+        }
+
+        if (!callbackStack.length) {
+          document.removeEventListener("keydown", onKeyDown, true);
         }
       }
     };
 
     if (!callbackStack.length) {
-      document.addEventListener("keydown", onKeyDown);
+      document.addEventListener("keydown", onKeyDown, true);
     }
 
     callbackStack.push({
@@ -89,34 +156,60 @@ const Blurg = ({ children, onBlur, closeAllOnEscape = false }: BlurgProps) => {
       node: main,
       callback: (e: any) => onBlur(e),
     });
-    console.log(id, callbackStack);
+    console.log("added", id, callbackStack);
 
-    main?.focus();
+    if (focusOnContainer) {
+      main?.focus();
+    }
 
     return () => {
-      if (!removedByCallBackRef.current) {
+      if (
+        !alreadyRemoved &&
+        callbackStack.length &&
+        main === callbackStack[callbackStack.length - 1].node
+      ) {
         counter.decrease();
         callbackStack = callbackStack.slice(0, counter.get());
         console.log("not removed by callback", counter.get(), callbackStack);
       }
+      console.log(callbackStack);
       if (!callbackStack.length) {
-        document.removeEventListener("keydown", onKeyDown);
+        document.removeEventListener("keydown", onKeyDown, true);
       }
+
+      alreadyRemoved = false;
     };
   }, []);
 
   return (
     <div
-      tabIndex={-1}
+      tabIndex={tabIndex}
       ref={mainRef}
       onBlur={(e: React.FocusEvent) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+        const targetOutsidePage =
+          !closeOutsidePage &&
+          !e.relatedTarget &&
+          e.currentTarget.contains(document.activeElement) &&
+          mainRef.current === callbackStack[callbackStack.length - 1].node;
+
+        if (targetOutsidePage) {
+          console.log("target outside of page", mainRef.current);
+          addMouseDown();
+          return;
+        }
+
+        const outsideContainer =
+          !e.currentTarget.contains(e.relatedTarget as Node) &&
+          (closeOutsidePage ||
+            !e.currentTarget.contains(document.activeElement));
+
+        if (outsideContainer) {
+          alreadyRemoved = true;
           counter.decrease();
 
           callbackStack = callbackStack.slice(0, counter.get());
-          console.log(counter.get(), callbackStack);
+          console.log("remove cbStack by onBlur", counter.get(), callbackStack);
           onBlur(e);
-          removedByCallBackRef.current = true;
         }
       }}
     >

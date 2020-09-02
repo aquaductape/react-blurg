@@ -32,9 +32,10 @@ const Card = ({ closeState: [passIsClosed, passSetIsClosed] }: CardProps) => {
         <button onClick={() => passSetIsClosed(true)}>Close</button>
         {!isClosed && toggle && (
           <Blurg
-            onBlur={(e: React.FocusEvent) => {
+            onBlur={(e) => {
               setToggle(false);
             }}
+            // closeAllOnEscape={true}
           >
             <Card closeState={[isClosed, setIsClosed]}></Card>
           </Blurg>
