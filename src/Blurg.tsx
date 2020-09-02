@@ -1,4 +1,4 @@
-import uuid from "uuid-random";
+// import uuid from "uuid-random";
 import React, { ReactChild, ReactChildren, useEffect, useRef } from "react";
 import { IOS, IOS13 } from "./browserInfo";
 
@@ -13,36 +13,93 @@ if (IOS && !IOS13) {
 type BlurgProps = {
   children: ReactChild | ReactChildren | boolean | null;
   onBlur: (e: React.FocusEvent) => void;
+  closeAllOnEscape?: boolean;
 };
 
-let eventQue: { id: string; callback: (e: any) => void }[] = [];
+let callbackStack: {
+  id: number;
+  node: HTMLDivElement | null;
+  callback: (e: any) => void;
+}[] = [];
 
-const Blurg = ({ children, onBlur }: BlurgProps) => {
-  const idRef = useRef(uuid());
+let counter = {
+  counter: 0,
+  get() {
+    return this.counter;
+  },
+  increase() {
+    this.counter++;
+  },
+  decrease() {
+    if (this.counter < 0) {
+      this.reset();
+      return;
+    }
+
+    this.counter--;
+  },
+  reset() {
+    this.counter = 0;
+  },
+};
+
+const Blurg = ({ children, onBlur, closeAllOnEscape = false }: BlurgProps) => {
+  const mainRef = useRef<HTMLDivElement>(null);
+  const removedByCallBackRef = useRef(false);
+
   useEffect(() => {
-    const id = idRef.current;
+    const main = mainRef.current!;
+    const removedByCallBack = removedByCallBackRef.current;
+    const id = counter.get();
+
+    counter.increase();
+
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key.match(/escape/i)) {
-        // console.log(idRef.current);
-        // onBlur(e as any);
-        const event = eventQue.pop();
+        if (closeAllOnEscape) {
+          callbackStack[0].callback(e);
+          callbackStack = [];
+
+          counter.reset();
+
+          removedByCallBackRef.current = true;
+          return;
+        }
+
+        const event = callbackStack.pop();
+
         if (event) {
           event.callback(e);
+          removedByCallBackRef.current = true;
+          counter.decrease();
+
+          if (callbackStack.length) {
+            callbackStack[counter.get() - 1].node?.focus();
+          }
         }
       }
     };
-    // mainRef.current?.focus();
-    if (!eventQue.length) {
+
+    if (!callbackStack.length) {
       document.addEventListener("keydown", onKeyDown);
     }
 
-    eventQue.push({
+    callbackStack.push({
       id,
+      node: main,
       callback: (e: any) => onBlur(e),
     });
+    console.log(id, callbackStack);
+
+    main?.focus();
 
     return () => {
-      if (!eventQue.length) {
+      if (!removedByCallBackRef.current) {
+        counter.decrease();
+        callbackStack = callbackStack.slice(0, counter.get());
+        console.log("not removed by callback", counter.get(), callbackStack);
+      }
+      if (!callbackStack.length) {
         document.removeEventListener("keydown", onKeyDown);
       }
     };
@@ -50,21 +107,19 @@ const Blurg = ({ children, onBlur }: BlurgProps) => {
 
   return (
     <div
-      // onTouch
       tabIndex={-1}
+      ref={mainRef}
       onBlur={(e: React.FocusEvent) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-          const id = idRef.current;
-          // console.log("not related!", e.relatedTarget);
-          console.log(id);
-          const idx = eventQue.findIndex((item) => item.id === id);
-          eventQue = eventQue.slice(0, idx);
+          counter.decrease();
+
+          callbackStack = callbackStack.slice(0, counter.get());
+          console.log(counter.get(), callbackStack);
           onBlur(e);
+          removedByCallBackRef.current = true;
         }
       }}
-      // {...attr}
     >
-      <div>{idRef.current}</div>
       {children}
     </div>
   );

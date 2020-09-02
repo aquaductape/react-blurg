@@ -3,13 +3,21 @@ import logo from "./logo.svg";
 import "./App.css";
 import Blurg from "./Blurg";
 
-const Card = () => {
+type CardProps = {
+  closeState: [boolean, React.Dispatch<React.SetStateAction<boolean>>];
+};
+const Card = ({ closeState: [passIsClosed, passSetIsClosed] }: CardProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [toggle, setToggle] = useState(false);
+  const [isClosed, setIsClosed] = useState(false);
 
   useEffect(() => {
-    inputRef.current!.focus();
-  }, []);
+    // inputRef.current!.focus();
+    if (isClosed) {
+      setIsClosed(false);
+      setToggle(false);
+    }
+  }, [isClosed]);
 
   return (
     <div className="card">
@@ -21,13 +29,14 @@ const Card = () => {
       <div className="form">
         <input type="text" placeholder="Dummy Input" ref={inputRef} />
         <button onClick={() => setToggle(true)}>Open another modal</button>
-        {toggle && (
+        <button onClick={() => passSetIsClosed(true)}>Close</button>
+        {!isClosed && toggle && (
           <Blurg
             onBlur={(e: React.FocusEvent) => {
               setToggle(false);
             }}
           >
-            <Card></Card>
+            <Card closeState={[isClosed, setIsClosed]}></Card>
           </Blurg>
         )}
         <div>
@@ -47,7 +56,7 @@ function App() {
         <p>
           Edit <code>src/App.tsx</code> and save to reload.
         </p>
-        <Card></Card>
+        {!toggle && <Card closeState={[toggle, setToggle]}></Card>}
         <a
           className="App-link"
           href="https://reactjs.org"
