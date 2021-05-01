@@ -207,6 +207,7 @@ const Blurg = ({
         }
 
         const outsideContainer =
+          !e.currentTarget.contains(e.target) &&
           !e.currentTarget.contains(e.relatedTarget as Node) &&
           (closeOutsidePage ||
             !e.currentTarget.contains(document.activeElement));
